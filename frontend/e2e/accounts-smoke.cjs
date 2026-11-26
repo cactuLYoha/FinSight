@@ -1,0 +1,92 @@
+const assert = require('node:assert/strict');
+const { randomUUID, createHash } = require('node:crypto');
+const { lookup } = require('node:dns/promises');
+const { readFile } = require('node:fs/promises');
+const { chromium } = require('playwright');
+if (!process.env.TEST_MAIL_DIR) throw new Error('Use isolated verification Compose with a test outbox.');
+const base = process.env.BASE_URL || 'http://localhost:4201';
+(async () => {
+  const host = await lookup('host.docker.internal', { family: 4 });
+  const browser = await chromium.launch({ args: ['--no-sandbox', '--host-resolver-rules=MAP localhost ' + host.address] });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const errors = [], writes = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (response.url().includes('/api/accounts') && response.request().method() !== 'GET') writes.push([response.request().method(), response.status()]); });
+  try {
+    await page.goto(base + '/accounts'); await page.waitForURL(base + '/login');
+    const email = 'accounts-' + randomUUID() + '@example.com';
+    await page.goto(base + '/register');
+    const notice = page.locator('.notice button'); if (await notice.first().isVisible()) await notice.first().click();
+    await page.locator('#email').fill(email); await page.locator('#password').fill('AccountsPassword123'); await page.locator('#confirmation').fill('AccountsPassword123');
+    await page.locator('button[type=submit]').click(); await page.waitForURL(base + '/verify');
+    const mail = JSON.parse(await readFile(process.env.TEST_MAIL_DIR + '/' + createHash('sha256').update(email).digest('hex') + '.json', 'utf8'));
+    await page.locator('#verification-code').fill(mail.code); await page.locator('#verification-code').press('Enter'); await page.waitForURL(base + '/');
+    await page.goto(base + '/accounts');
+    await page.getByRole('button', { name: '+ Додати рахунок', exact: true }).click();
+    await page.getByLabel('Назва рахунку', { exact: true }).fill('Основна картка');
+    await page.getByLabel('Тип рахунку', { exact: true }).selectOption('card');
+    await page.getByRole('button', { name: 'Зберегти рахунок', exact: true }).click();
+    await page.locator('.detail h2').filter({ hasText: 'Основна картка' }).waitFor();
+    await page.getByRole('button', { name: 'Редагувати рахунок', exact: true }).click();
+    await page.getByLabel('Назва рахунку', { exact: true }).fill('Зарплатна картка');
+    await page.getByRole('button', { name: 'Зберегти рахунок', exact: true }).click();
+    await page.locator('.detail h2').filter({ hasText: 'Зарплатна картка' }).waitFor();
+    await page.getByRole('button', { name: '+ Додати дохід', exact: true }).click();
+    await page.getByLabel('Сума доходу, UAH', { exact: true }).fill('25000,50');
+    await page.getByLabel('Опис доходу', { exact: true }).fill('Зарплата за місяць');
+    await page.getByLabel('Повторювати щомісяця', { exact: true }).check();
+    await page.getByRole('button', { name: 'Зберегти дохід', exact: true }).click();
+    await page.locator('.history > .income-row').filter({ hasText: 'Зарплата за місяць' }).waitFor();
+    await page.reload();
+    await page.locator('.account-card').filter({ hasText: 'Зарплатна картка' }).click();
+    await page.getByRole('button', { name: 'Зупинити надходження Зарплата за місяць', exact: true }).click();
+    await page.getByRole('button', { name: 'Повторювати дохід Зарплата за місяць', exact: true }).click();
+    await page.getByRole('button', { name: 'Зупинити надходження Зарплата за місяць', exact: true }).waitFor();
+    assert.ok((await page.locator('.detail-balance').innerText()).includes('25'));
+    const totals = await page.evaluate(async () => {
+      const [year, month] = new Date().toISOString().slice(0, 7).split('-');
+      return (await (await fetch(`/api/analytics/monthly?year=${year}&month=${month}&currency=UAH`)).json()).analytics;
+    });
+    assert.equal(totals.income_total, '25000.50');
+    await page.getByRole('link', { name: 'Заощадження', exact: true }).click();
+    await page.getByRole('button', { name: '+ Створити ціль', exact: true }).click();
+    await page.getByLabel('Назва цілі', { exact: true }).fill('Ledger test goal');
+    await page.getByLabel('Цільова сума, UAH', { exact: true }).fill('5000');
+    await page.getByRole('button', { name: 'Зберегти ціль', exact: true }).click();
+    await page.getByRole('button', { name: '+ Додати внесок', exact: true }).click();
+    assert.notEqual(await page.getByLabel('Рахунок для внеску').inputValue(), '');
+    await page.getByLabel('Сума, UAH', { exact: true }).fill('1000');
+    await page.getByRole('button', { name: 'Зберегти внесок', exact: true }).click();
+    await page.locator('.contribution').first().waitFor();
+    async function checkBalance(expected, savings) {
+      const accounts = await page.evaluate(async () => (await (await fetch('/api/accounts')).json()).accounts);
+      assert.equal(accounts[0].balance, expected); assert.equal(accounts[0].savings_total, savings);
+      assert.equal(accounts[0].income_total, '25000.50'); assert.equal(accounts[0].expense_total, '0.00');
+    }
+    await checkBalance('24000.50', '1000.00');
+    await page.locator('.contribution button').filter({ hasText: 'Редагувати' }).click();
+    await page.getByLabel('Сума, UAH', { exact: true }).fill('500');
+    await page.getByRole('button', { name: 'Зберегти внесок', exact: true }).click();
+    await page.locator('.contribution-editor').waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: 'Редагувати внесок від', exact: false }).waitFor();
+    await checkBalance('24500.50', '500.00');
+    await page.locator('.contribution button').filter({ hasText: 'Видалити' }).click();
+    await page.getByRole('button', { name: 'Підтвердити', exact: true }).click();
+    await page.getByText('Внесок видалено.', { exact: true }).waitFor();
+    await checkBalance('25000.50', '0.00');
+    await page.getByRole('link', { name: 'Рахунки', exact: true }).click();
+    await page.locator('.account-card').filter({ hasText: 'Зарплатна картка' }).click();
+    await page.locator('.history > .income-row').first().waitFor();
+    for (const width of [375, 768, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Overflow at ' + width);
+      await page.screenshot({ path: '/artifacts/accounts-' + width + '.png', fullPage: true });
+    }
+    await page.getByRole('link', { name: 'Витрати та підписки', exact: true }).click();
+    await page.getByRole('button', { name: '+ Додати витрату', exact: true }).click();
+    const options = await page.locator('#expense-form select[formcontrolname=account_id] option').allTextContents();
+    assert.ok(options.includes('Зарплатна картка'));
+    assert.deepEqual(errors, []); assert.deepEqual(writes, [['POST', 201], ['PATCH', 200], ['POST', 201], ['DELETE', 204], ['POST', 201]]);
+    console.log('Accounts browser smoke passed: creation, editing, income, persistence, analytics, expense integration, responsive layouts.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

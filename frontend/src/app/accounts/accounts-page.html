@@ -1,0 +1,54 @@
+<section class="container accounts-page">
+  <div class="heading"><div><p class="eyebrow">КОШТИ ПІД КОНТРОЛЕМ</p><h1>Рахунки</h1><p class="muted">Ваші баланси та надходження в одному місці.</p></div><button type="button" class="button button-primary" (click)="open('create')" [disabled]="saving() || loading()">+ Додати рахунок</button></div>
+  <nav class="cabinet-tabs" aria-label="Розділи особистого кабінету"><a routerLink="/dashboard">Огляд</a><a routerLink="/dashboard" [queryParams]="{tab: 'expenses'}">Витрати та підписки</a><a routerLink="/savings">Заощадження</a><a routerLink="/accounts" aria-current="page">Рахунки</a></nav>
+  <div class="toolbar"><p class="muted">{{ accounts().length }} рахунків · суми за валютами</p><button type="button" (click)="load()" [disabled]="saving() || loading()">Оновити дані</button></div>
+  @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+  @if (loading()) { <p class="muted" role="status">Оновлюємо баланси…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  <div class="totals" [attr.aria-busy]="loading()">@for (total of totals(); track total.currency) { <article class="panel"><p class="muted">Баланс у {{ total.currency }}</p><strong>{{ money(total.amount, total.currency) }}</strong></article> }</div>
+  <div class="workspace">
+    <section class="panel account-list" aria-labelledby="accounts-title"><h2 id="accounts-title">Мої рахунки</h2>
+      @for (account of accounts(); track account.id) {
+        <button type="button" class="account-card" [class.selected]="selected()?.id === account.id" [attr.aria-pressed]="selected()?.id === account.id" (click)="select(account)" [disabled]="saving() || loading() || statementBusy()"><span class="card-top"><strong>{{ account.name }}</strong><span>{{ account.currency }}</span></span><span class="muted">{{ types[account.account_type] || account.account_type }}</span><strong class="balance" [class.negative]="+account.balance < 0">{{ money(account.balance, account.currency) }}</strong></button>
+      } @empty { @if (!loading() && !error()) { <div class="empty"><h3>Додайте свій перший рахунок</h3><p>Створіть банківський рахунок, картку чи готівковий гаманець і внесіть перший дохід.</p><button type="button" (click)="open('create')">Створити рахунок</button></div> } }
+    </section>
+    <section class="panel detail" aria-labelledby="account-detail-title">
+      @if (selected(); as account) {
+        <p class="eyebrow">{{ types[account.account_type] || account.account_type }}</p><h2 id="account-detail-title">{{ account.name }}</h2><p class="detail-balance" [class.negative]="+account.balance < 0">{{ money(account.balance, account.currency) }}</p>
+        @if (account.income_total !== undefined) { <p class="help">Доступно = надходження {{ money(account.income_total, account.currency) }} − витрати {{ money(account.expense_total ?? '0', account.currency) }} − заощадження {{ money(account.savings_total ?? '0', account.currency) }}. За весь час.</p> }
+        <div class="actions"><button type="button" class="button button-primary" (click)="open('income')" [disabled]="saving() || loading()">+ Додати дохід</button><button type="button" (click)="open('edit')" [disabled]="saving() || loading()">Редагувати рахунок</button></div>
+        @for (uploadAccount of [account]; track uploadAccount.id) {
+          <app-statement-upload [account]="uploadAccount" (busy)="statementBusy.set($event)" (imported)="load()" />
+        }
+      } @else { <div class="empty"><h2 id="account-detail-title">Оберіть рахунок</h2><p>Переглядайте надходження, додавайте доходи та редагуйте дані рахунку.</p></div> }
+      @if (editor(); as mode) {
+        <section class="editor"><div class="heading"><h3>{{ mode === 'income' ? 'Нове надходження' : mode === 'edit' ? 'Редагувати рахунок' : 'Новий рахунок' }}</h3><button type="button" (click)="editor.set(null)" [disabled]="saving()">Закрити</button></div>
+          @if (mode === 'income') {
+            <label class="repeat-choice"><input type="checkbox" [checked]="incomeForm.controls.recurring.value" (change)="incomeForm.controls.recurring.setValue($any($event.target).checked)" [disabled]="saving()" /> Повторювати щомісяця</label>
+            @if (incomeForm.controls.recurring.value) { <p class="help">Дата задає перше надходження та день повторення. Для 29–31 числа в короткому місяці використовується останній день. Минулі надходження від цієї дати до сьогодні будуть додані одразу; майбутні — лише у відповідний день.</p> }
+            <form [formGroup]="incomeForm" (ngSubmit)="saveIncome()" novalidate><fieldset [disabled]="saving()"><div class="form-grid"><label>Сума доходу, {{ selected()!.currency }}<input formControlName="amount" inputmode="decimal" placeholder="25000.00" /></label><label>Дата надходження<input formControlName="date" type="date" min="0001-01-01" [max]="incomeForm.controls.recurring.value ? '9998-12-31' : today()" /></label></div><label>Опис доходу<input formControlName="description" maxlength="100" placeholder="Наприклад, зарплата" /></label><p class="help">Сума збільшить баланс цього рахунку й увійде до доходів за вибраною датою.</p>@if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }<button type="submit" class="button button-primary">{{ saving() ? 'Зберігаємо…' : 'Зберегти дохід' }}</button></fieldset></form>
+          } @else {
+            <form [formGroup]="accountForm" (ngSubmit)="saveAccount()" novalidate><fieldset [disabled]="saving()"><label>Назва рахунку<input formControlName="name" maxlength="120" placeholder="Наприклад, основна картка" /></label><div class="form-grid"><label>Тип рахунку<select formControlName="account_type" aria-label="Тип рахунку"><option value="bank">Банківський рахунок</option><option value="card">Картка</option><option value="cash">Готівка</option><option value="savings">Ощадний рахунок</option></select></label>
+            @if (mode === 'create') { <label>Валюта рахунку<select formControlName="currency" aria-label="Валюта рахунку"><option>UAH</option><option>USD</option><option>EUR</option></select></label> } @else { <p class="help">Валюта: {{ selected()!.currency }}. Вона зберігається для всіх операцій рахунку.</p> }
+            </div><p class="help">Новий рахунок починається з нульового балансу. Наявні кошти можна записати як дохід із відповідною датою та описом.</p>@if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }<button type="submit" class="button button-primary">{{ saving() ? 'Зберігаємо…' : 'Зберегти рахунок' }}</button></fieldset></form>
+          }
+        </section>
+      }
+      @if (selected(); as account) {
+        <section class="history" [attr.aria-busy]="historyLoading()"><h3>Історія надходжень</h3>
+          @if (history()?.recurring_incomes?.length) {
+            <section class="recurring-rules" aria-label="Щомісячні надходження"><h3>Щомісячні надходження</h3>
+              @for (rule of history()!.recurring_incomes!; track rule.id) { <article class="income-row"><div><strong>{{ rule.description }}</strong><p class="muted">{{ money(rule.amount, account.currency) }} · {{ rule.billing_day }}-го щомісяця</p><p class="muted">Наступне: {{ dateLabel(rule.next_due_on) }}</p></div><button type="button" (click)="stopIncome(rule.id)" [disabled]="saving()" [attr.aria-label]="'Зупинити надходження ' + rule.description">Зупинити</button></article> }
+            </section>
+          }
+          @if (historyLoading()) { <p class="muted" role="status">Завантажуємо доходи…</p> }
+          @if (historyError()) { <p class="error" role="alert">{{ historyError() }}</p><button type="button" (click)="loadHistory()">Повторити</button> }
+          @if (history(); as history) {
+            @for (income of history.incomes; track income.id) { <article class="income-row"><div><strong>{{ income.description }}</strong><p class="muted">{{ dateLabel(income.date) }}{{ income.recurring_active ? ' · Щомісячне' : income.recurring_id ? ' · Повторення зупинено' : '' }}</p>@if (!income.recurring_active) { <button type="button" (click)="repeatIncome(income)" [disabled]="saving() || loading()" [attr.aria-label]="'Повторювати дохід ' + income.description">Повторювати щомісяця</button> }</div><strong class="success">+{{ money(income.amount, account.currency) }}</strong></article> } @empty { <p class="muted">Доходів на цьому рахунку ще немає.</p> }
+            @if (history.total > 0) { <div class="pagination"><span>Усього: {{ history.total }} · Сторінка {{ page() }}</span><div><button type="button" (click)="turnPage(-1)" [disabled]="page() <= 1 || saving()">Назад</button><button type="button" (click)="turnPage(1)" [disabled]="page() * 50 >= history.total || saving()">Далі</button></div></div> }
+          }
+        </section>
+      }
+    </section>
+  </div>
+</section>

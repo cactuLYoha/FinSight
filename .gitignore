@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.docker.example
+.venv/
+.venv-py314-backup/
+.python313/
+__pycache__/
+.pytest_cache/
+*.pyc
+node_modules/
+dist/
+.angular/
+coverage/
+artifacts/
+secrets/

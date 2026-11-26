@@ -1,0 +1,32 @@
+<section class="container verification-layout">
+  <div class="form-card">
+    <div class="form-icon"><app-icon name="shield" [size]="26" /></div>
+    <p class="eyebrow">ЩЕ ОДИН КРОК ДО ВХОДУ</p>
+    <h1>Перевірте пошту</h1>
+    @if (auth.verification(); as context) {
+      <p class="form-description">Введіть код із листа на <strong>{{ context.masked_email }}</strong>.</p>
+    }
+    @if (loading()) { <p class="info" role="status">Перевіряємо запит…</p> }
+    @if (info()) { <p class="info" role="status">{{ info() }}</p> }
+    @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+    @if (!loading() && !closed() && remaining()) {
+      <form [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="pending()">
+        <div class="field">
+          <label for="verification-code">Одноразовий код</label>
+          <input id="verification-code" type="text" inputmode="numeric" autocomplete="one-time-code" formControlName="code"
+            maxlength="6" placeholder="000000" [readOnly]="pending()" aria-describedby="code-help">
+          <p id="code-help" class="code-help">6 цифр · код діє ще {{ remaining() }} с</p>
+        </div>
+        <label class="trust-choice"><input type="checkbox" formControlName="trust"><span>Довіряти цьому браузеру 90 днів</span></label>
+        <p class="trust-help">Наступного разу потрібен буде пароль без поштового коду. «Вийти» скасовує довіру.</p>
+        <button type="submit" class="button button-primary submit" [disabled]="pending()">{{ pending() ? 'Перевіряємо…' : 'Підтвердити та увійти' }} <app-icon name="arrow" [size]="18" /></button>
+      </form>
+      <button class="resend" type="button" [disabled]="pending() || cooldown() > 0" (click)="resend()">
+        {{ cooldown() ? 'Повторити надсилання через ' + cooldown() + ' с' : 'Надіслати код ще раз' }}
+      </button>
+    } @else if (!loading() && !closed()) {
+      <p class="info">Строк дії коду завершився. Почніть вхід заново.</p>
+    }
+    <p class="switch-form"><a routerLink="/login">Повернутися до входу</a></p>
+  </div>
+</section>

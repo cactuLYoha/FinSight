@@ -1,0 +1,97 @@
+name: finsight
+
+x-backend: &backend
+  image: finsight-api:local
+  build:
+    context: ./backend
+  environment:
+    DB_HOST: db
+    DB_PORT: "5432"
+    DB_NAME: ${POSTGRES_DB:-finsight}
+    DB_USER: ${POSTGRES_USER:-finsight}
+    DB_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env.docker first}
+    SECRET_KEY: ${SECRET_KEY:?Generate .env.docker first}
+    JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate .env.docker first}
+    CORS_ORIGINS: ${CORS_ORIGINS:-}
+    FRONTEND_PORT: ${FRONTEND_PORT:-4200}
+    AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:${FRONTEND_PORT:-4200},http://127.0.0.1:${FRONTEND_PORT:-4200}}
+    JWT_COOKIE_SECURE: ${JWT_COOKIE_SECURE:-false}
+    BSP_HYBRID_MODEL: ${BSP_HYBRID_MODEL:-ollama/qwen2.5:3b}
+    BSP_HYBRID_API_BASE: ${BSP_HYBRID_API_BASE:-http://host.docker.internal:11434}
+    GMAIL_TOKEN_FILE: /run/secrets/gmail_oauth
+
+services:
+  db:
+    image: postgres:18
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-finsight}
+      POSTGRES_USER: ${POSTGRES_USER:-finsight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env.docker first}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["flask", "--app", "run", "db", "upgrade"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *backend
+    env_file:
+      - ./.env.gmail
+    secrets:
+      - gmail_oauth
+    ports:
+      - "127.0.0.1:${API_PORT:-5000}:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health', timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+  recurring:
+    <<: *backend
+    command: ["python", "-m", "app.recurring_worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    image: finsight-frontend:local
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+secrets:
+  gmail_oauth:
+    file: ${GMAIL_TOKEN_PATH:-./secrets/gmail_token.json}

@@ -1,0 +1,6 @@
+FROM mcr.microsoft.com/playwright:v1.58.2-noble
+WORKDIR /tests
+RUN npm install --ignore-scripts --no-audit --no-fund playwright@1.58.2
+COPY e2e/ ./
+ENV BASE_URL=http://localhost:4200
+CMD ["node", "auth-smoke.cjs"]

@@ -1,0 +1,52 @@
+<article class="expense-panel" [attr.aria-busy]="loading() || saving()">
+  <div class="heading"><div><p class="eyebrow">ОБЛІК ОПЕРАЦІЙ</p><h2>Витрати за місяць</h2></div><button type="button" class="add" (click)="toggleForm()" [attr.aria-expanded]="open()" aria-controls="expense-form" [disabled]="saving() || loading()">{{ open() ? 'Закрити' : '+ Додати витрату' }}</button></div>
+  @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+  @if (open()) {
+    <form id="expense-form" [formGroup]="form" (ngSubmit)="add()" novalidate>
+      @if (editing(); as expense) { <h3>Редагувати витрату «{{ expense.description }}»</h3>@if (expense.recurring_id) { <p class="help">Зміниться лише ця операція. Сума, рахунок і графік майбутніх щомісячних витрат залишаються чинними.</p> } }
+      <div class="form-grid">
+        <label>Сума витрати, {{ currency() }}<input formControlName="amount" inputmode="decimal" placeholder="250.00" [readOnly]="saving()" /></label>
+        <label>Дата витрати<input type="date" formControlName="date" [min]="editing() ? '0001-01-01' : month() + '-01'" [max]="editing() ? '9998-12-31' : lastDate()" [readOnly]="saving()" /></label>
+        <label>Категорія<select formControlName="category_id" [attr.disabled]="saving() ? '' : null"><option value="">Оберіть категорію</option>@for (category of data()?.categories ?? []; track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label>
+        <label>Рахунок<select formControlName="account_id" [attr.disabled]="saving() ? '' : null"><option value="">{{ editing() ? 'Оберіть рахунок' : 'Ручний облік (окремий рахунок)' }}</option>@for (account of data()?.accounts ?? []; track account.id) { <option [value]="account.id">{{ account.name }}</option> }</select></label>
+      </div>
+      <label>Опис витрати<input formControlName="description" maxlength="100" placeholder="Наприклад, продукти на тиждень" [readOnly]="saving()" /></label>
+      @if (!editing()) { <label class="repeat-choice"><input type="checkbox" formControlName="recurring" [attr.disabled]="saving() ? '' : null" /> Повторювати щомісяця</label> }
+      @if (form.controls.recurring.value) { <p class="help">День повторення береться з дати витрати. Наприклад, оренда 5-го числа повторюватиметься 5-го щомісяця. У короткому місяці — останнього дня. Для минулої дати додаються також повторення до сьогодні; майбутні операції не додаються заздалегідь.</p> }
+      <p class="help">Сума має бути більшою за нуль, до двох знаків після крапки. Якщо обрати «Ручний облік», витрата збережеться на окремому рахунку у {{ currency() }}.</p>
+      @if (form.touched && form.invalid) { <p class="error">Заповніть суму, дату, категорію й опис до 100 символів.</p> }
+      <button class="button button-primary" type="submit" [disabled]="saving() || loading() || deleteConfirm() || !data()?.categories?.length">{{ saving() ? 'Виконуємо…' : editing() ? 'Зберегти зміни' : 'Зберегти витрату' }}</button>
+      @if (editing(); as expense) {
+        <button type="button" class="danger" (click)="deleteConfirm.set(true)" [disabled]="saving() || loading()">Видалити витрату</button>
+        @if (deleteConfirm()) {
+          <div class="delete-confirmation" role="group" aria-label="Підтвердження видалення витрати">
+            <p>Видалити «{{ expense.description }}» на {{ money(expense.amount) }}? Суму буде повернуто на рахунок. Відновити операцію буде неможливо.</p>
+            @if (expense.recurring_id) { <p class="help">Видалиться лише ця операція. Майбутні щомісячні повторення залишаться чинними.</p> }
+            <button type="button" class="danger" (click)="deleteExpense()" [disabled]="saving() || loading()">{{ saving() ? 'Видаляємо…' : 'Підтвердити видалення' }}</button>
+            <button type="button" (click)="deleteConfirm.set(false)" [disabled]="saving()">Залишити витрату</button>
+          </div>
+        }
+      }
+    </form>
+  }
+  @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+  @if (loading()) { <p class="help" role="status">Завантажуємо витрати…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p><button (click)="load()">Повторити</button> }
+  @if (data(); as data) {
+    @if (data.recurring_expenses?.length) {
+      <section class="recurring-rules" aria-label="Щомісячні витрати"><h3>Щомісячні витрати</h3>
+        <ul>@for (rule of data.recurring_expenses; track rule.id) {
+          <li><div class="expense-main"><strong>{{ rule.description }}</strong><span>{{ rule.category }} · {{ rule.billing_day }}-го числа щомісяця</span><small>Наступна оплата: {{ dateLabel(rule.next_due_on) }}</small></div><div class="expense-actions"><strong class="amount">{{ money(rule.amount) }}</strong><button (click)="stop(rule)" [disabled]="saving()" [attr.aria-label]="'Зупинити повторення ' + rule.description">Зупинити</button></div></li>
+        }</ul><p class="help">Якщо в місяці немає дня оплати, витрата створюється останнього дня. Зупинка повторень не видаляє минулі операції.</p>
+      </section>
+    }
+    @if (data.expenses.length) {
+      <ul>@for (expense of data.expenses; track expense.id) {
+        <li><div class="expense-main"><strong>{{ expense.description }}</strong><span>{{ expense.category }} · {{ dateLabel(expense.date) }}</span><small>{{ expense.account }}{{ expense.recurring_active ? ' · Щомісячна' : expense.recurring_id ? ' · Повторення зупинено' : '' }}</small></div><div class="expense-actions"><strong class="amount">{{ money(expense.amount) }}</strong>
+          <button type="button" (click)="edit(expense)" [disabled]="saving() || loading()" [attr.aria-label]="'Редагувати витрату ' + expense.description">Редагувати</button>
+          @if (!expense.recurring_active) { <button (click)="repeat(expense)" title="Повторювати з наступного місяця, без зміни попередніх операцій" [disabled]="saving()" [attr.aria-label]="'Повторювати щомісяця ' + expense.description">Щомісяця</button> } @else { <button (click)="stopRecurring(expense.recurring_id!)" [disabled]="saving()" [attr.aria-label]="'Зупинити повторення операції ' + expense.description">Зупинити повторення</button> }</div></li>
+      }</ul>
+      <div class="pagination"><span>Усього: {{ data.total }} · Сторінка {{ page() }}</span><div><button (click)="turnPage(-1)" [disabled]="page() <= 1 || loading()">Назад</button><button (click)="turnPage(1)" [disabled]="page() * 50 >= data.total || loading()">Далі</button></div></div>
+    } @else { <div class="empty"><h3>Витрат за цей місяць немає</h3><p>Додайте першу витрату або виберіть інший місяць чи валюту.</p></div> }
+  }
+</article>

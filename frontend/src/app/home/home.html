@@ -1,0 +1,110 @@
+<section class="hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <div class="hero-badge"><span></span> ОСОБИСТІ ФІНАНСИ. НОВА ПЕРСПЕКТИВА.</div>
+      <h1>Ваші фінанси.<br />Зрозуміла<br /><span>перспектива.</span></h1>
+      <p class="hero-description">
+        Менше здогадок про гроші. Більше розуміння.<br class="desktop-break" />
+        FinSight поєднує витрати, заощадження та прогнози, щоб ви впевненіше планували наступний
+        крок.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#features"
+          >Відкрити можливості <app-icon name="arrow" [size]="18"
+        /></a>
+        <a class="how-link" href="#how-it-works"
+          ><span class="play-mark" aria-hidden="true">↗</span> Як це працює</a
+        >
+      </div>
+      <div class="hero-note">
+        <app-icon name="shield" [size]="16" /><span>Ваші дані. Ваші цілі. Ваші рішення.</span>
+      </div>
+    </div>
+    <div class="hero-visual"><app-financial-preview /></div>
+  </div>
+  <div class="container hero-bottom">
+    <span class="hero-bottom-label">ВІД ЩОДЕННИХ ВИТРАТ<br />ДО ВЕЛИКИХ ПЛАНІВ</span>
+    <div>
+      <span class="mini-icon"><app-icon name="wallet" [size]="19" /></span
+      ><span>Бачте загальну картину</span>
+    </div>
+    <div>
+      <span class="mini-icon"><app-icon name="target" [size]="19" /></span
+      ><span>Рухайтесь до своєї мети</span>
+    </div>
+    <div>
+      <span class="mini-icon"><app-icon name="branches" [size]="19" /></span
+      ><span>Плануйте на кілька кроків уперед</span>
+    </div>
+  </div>
+</section>
+
+<section class="features container" id="features" aria-labelledby="features-title">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">МОЖЛИВОСТІ FINSIGHT</p>
+      <h2 id="features-title">Одна картина.<br />Більше ясності.</h2>
+    </div>
+    <p>Коли цифри пов’язані між собою,<br />фінансові рішення стають зрозумілішими.</p>
+  </div>
+  <div class="feature-grid">
+    @for (feature of features; track feature.number) {
+      <article class="feature-card">
+        <div class="feature-top">
+          <span class="feature-icon"><app-icon [name]="feature.icon" [size]="24" /></span
+          ><span class="feature-number">{{ feature.number }}</span>
+        </div>
+        <h3>{{ feature.title }}</h3>
+        <p>{{ feature.text }}</p>
+      </article>
+    }
+  </div>
+</section>
+
+<section class="how container" id="how-it-works" aria-labelledby="how-title">
+  <div class="how-intro">
+    <p class="eyebrow">ВІД ДАНИХ ДО РІШЕНЬ</p>
+    <h2 id="how-title">Фінансова ясність<br />починається з простого.</h2>
+    <p>Не потрібно бути фінансовим аналітиком.<br />Достатньо почати зі своєї звичної картини.</p>
+  </div>
+  <ol class="steps">
+    <li>
+      <span class="step-number">1</span>
+      <div>
+        <h3>Зберіть свою картину</h3>
+        <p>В основі — ваші доходи й витрати за категоріями.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-number">2</span>
+      <div>
+        <h3>Побачте закономірності</h3>
+        <p>Місячна аналітика показує, куди рухаються гроші.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-number">3</span>
+      <div>
+        <h3>Дайте планам напрям</h3>
+        <p>Ціль заощаджень і сценарії допомагають оцінити наступні кроки.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section class="about container" id="about" aria-labelledby="about-title">
+  <div class="about-symbol" aria-hidden="true"><app-icon name="chart" [size]="46" /></div>
+  <div>
+    <p class="eyebrow">ПРО ПРОЄКТ</p>
+    <h2 id="about-title">Гроші — частина життя.<br />Нехай із ними буде зрозуміліше.</h2>
+    <p>
+      FinSight — проєкт для усвідомленого управління особистими фінансами. Він допомагає об’єднати
+      поточні цифри з майбутніми цілями та побачити, як щоденні рішення впливають на ваші плани.
+    </p>
+    <p class="forecast-note">
+      Прогнози показують можливі сценарії за історичними даними. Фактичні результати залежать від
+      ваших майбутніх доходів і витрат.
+    </p>
+  </div>
+</section>

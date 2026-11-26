@@ -1,0 +1,52 @@
+<div class="shell" [class.notice-visible]="notice.visible()">
+  <a class="skip-link" href="#main-content">Перейти до вмісту</a>
+  <header class="header">
+    <div class="container header-inner">
+      <a class="brand" routerLink="/" aria-label="FinSight — головна" (click)="closeMenu()">
+        <img src="favicon.svg" width="34" height="34" alt="" />
+        <span>Fin<span class="brand-light">Sight</span><span class="brand-dot">.</span></span>
+      </a>
+      <button
+        type="button"
+        class="menu-toggle"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="main-nav"
+        [attr.aria-label]="menuOpen() ? 'Закрити меню' : 'Відкрити меню'"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <app-icon [name]="menuOpen() ? 'close' : 'menu'" [size]="24" />
+      </button>
+      <nav
+        id="main-nav"
+        [class.open]="menuOpen()"
+        aria-label="Головна навігація"
+        (keydown.escape)="closeMenu()"
+      >
+        <a routerLink="/" fragment="features" (click)="closeMenu()">Можливості</a>
+        <a routerLink="/" fragment="how-it-works" (click)="closeMenu()">Як це працює</a>
+        <a routerLink="/" fragment="about" (click)="closeMenu()">Про проєкт</a>
+        <app-auth-navigation (navigated)="closeMenu()" />
+      </nav>
+    </div>
+  </header>
+  <main id="main-content" tabindex="-1"><router-outlet /></main>
+  <footer>
+    <div class="container footer-inner">
+      <a class="brand" routerLink="/" aria-label="FinSight — головна">
+        <img src="favicon.svg" width="27" height="27" alt="" /><span
+          >Fin<span class="brand-light">Sight</span><span class="brand-dot">.</span></span
+        >
+      </a>
+      <span class="footer-tagline">Менше невідомого. Більше перспективи.</span>
+      <div class="footer-links">
+        <a routerLink="/cookies">Про cookies</a>
+        <button type="button" (click)="reopenNotice()">Повідомлення про cookies</button>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© FinSight. Особисті фінанси з перспективою.</span
+      ><span>Зроблено для усвідомлених рішень <span class="small-dot"></span></span>
+    </div>
+  </footer>
+</div>
+<app-cookie-notice />

@@ -1,0 +1,117 @@
+<section class="container savings">
+  <div class="heading"><div><p class="eyebrow">КРОК ЗА КРОКОМ ДО МЕТИ</p><h1>Заощадження</h1><p class="muted">Перетворюйте плани на цілі та стежте за кожним внеском.</p></div><button class="button button-primary" (click)="openGoal()" [disabled]="saving()">+ Створити ціль</button></div>
+  <nav class="cabinet-tabs" aria-label="Розділи особистого кабінету"><a routerLink="/dashboard">Огляд</a><a routerLink="/dashboard" [queryParams]="{tab: 'expenses'}">Витрати та підписки</a><a routerLink="/savings" aria-current="page">Заощадження</a><a routerLink="/accounts">Рахунки</a></nav>
+  <div class="toolbar"><div class="filters"><label>Місяць зведення<input type="month" min="0001-01" max="9998-12" [value]="month()" (change)="changeMonth($event)" [disabled]="saving()" /></label><label>Валюта<select [value]="currency()" (change)="changeCurrency($event)" [disabled]="saving()"><option>UAH</option><option>USD</option><option>EUR</option></select></label></div><button (click)="load()" [disabled]="saving() || loading() || summaryLoading()">Оновити дані</button></div>
+  @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+  @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+  @if (summaryError()) { <p class="error" role="alert">{{ summaryError() }}</p><button (click)="loadSummary()">Повторити зведення</button> }
+  @if (summaryLoading()) { <p class="muted" role="status">Завантажуємо зведення…</p> }
+  <div class="summary" [attr.aria-busy]="summaryLoading()">
+    <article class="highlight"><p>Доступно для заощаджень</p><strong>{{ summary() ? money(summary()!.available_to_save) : '—' }}</strong><span>Додатна різниця доходів і витрат за місяць</span></article>
+    <article><p>Чисті заощадження за місяць</p><strong>{{ summary() ? money(summary()!.net_savings) : '—' }}</strong><span>Доходи мінус витрати</span></article>
+    <article><p>Частка заощаджень</p><strong>{{ summary()?.savings_rate_percent != null ? summary()!.savings_rate_percent + '%' : '—' }}</strong><span>{{ summary()?.savings_rate_percent == null ? 'Для розрахунку потрібні доходи' : 'Від доходів вибраного місяця' }}</span></article>
+  </div>
+  <p class="help">Внесок у заощадження зменшує доступний баланс рахунку. Видалення внеску повертає кошти. Перенесення між цілями не списує їх повторно.</p>
+
+  @if (goalFormOpen()) {
+    <article class="panel editor"><div class="heading"><h2>{{ editingGoal() === null ? 'Нова фінансова ціль' : 'Редагувати ціль' }}</h2><button (click)="goalFormOpen.set(false)" [disabled]="saving()">Закрити</button></div>
+      <form [formGroup]="goalForm" (ngSubmit)="saveGoal()" novalidate><fieldset [disabled]="saving()"><div class="form-grid">
+        <label>Назва цілі<input formControlName="name" maxlength="120" placeholder="Наприклад, фінансова подушка" /></label>
+        <label>Цільова сума, {{ currency() }}<input formControlName="target_amount" inputmode="decimal" placeholder="50000.00" /></label>
+        <label>Накопичити до<input type="date" formControlName="deadline" [min]="minimumDeadline()" max="9999-12-31" /></label>
+      </div><p class="help">Строк — з наступного місяця. Валюта цілі після створення не змінюється.</p><button class="button button-primary" type="submit">{{ saving() ? 'Зберігаємо…' : 'Зберегти ціль' }}</button></fieldset></form>
+    </article>
+  }
+
+  <div class="workspace">
+    <section class="panel goals" aria-labelledby="goals-title" [attr.aria-busy]="loading()">
+      <div class="heading"><h2 id="goals-title">Мої цілі</h2><span class="muted">Активних: {{ activeCount() }}</span></div>
+      <button type="button" (click)="showArchived.set(!showArchived())" [attr.aria-pressed]="showArchived()">{{ showArchived() ? 'Приховати архів' : 'Показати завершені та скасовані' }}</button>
+      @if (loading()) { <p class="muted" role="status">Завантажуємо цілі…</p> }
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p><button (click)="load()" [disabled]="saving()">Повторити</button> }
+      @for (goal of visibleGoals(); track goal.id) {
+        <button class="goal-card" [class.selected]="selected()?.id === goal.id" [attr.aria-pressed]="selected()?.id === goal.id" (click)="selectGoal(goal)" [disabled]="saving()">
+          <span class="goal-top"><strong>{{ goal.name }}</strong><span class="badge" [class.active]="goal.status === 'active'">{{ statusNames[goal.status] }}</span></span>
+          <span class="saved">{{ money(goal.saved_amount, goal.currency) }} <small>із {{ money(goal.target_amount, goal.currency) }}</small></span>
+          <span class="progress" role="progressbar" [attr.aria-label]="'Прогрес цілі ' + goal.name" [attr.aria-valuenow]="goal.progress_percent" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="+goal.progress_percent"></span></span>
+          <span class="goal-bottom"><span>{{ goal.progress_percent }}%</span><span>До {{ dateLabel(goal.deadline) }}</span></span>
+        </button>
+      } @empty {
+        @if (!loading() && !error()) { <div class="empty"><h3>Ваша наступна мета починається тут</h3><p>Немає {{ showArchived() ? '' : 'активних ' }}цілей у {{ currency() }}. Створіть нову та додайте внесок.</p><button (click)="openGoal()">Створити ціль</button></div> }
+      }
+    </section>
+    <section class="panel detail" aria-labelledby="detail-title" [attr.aria-busy]="detailLoading() || saving()">
+      @if (selected(); as goal) {
+        <p class="eyebrow">ВАША МЕТА</p><h2 id="detail-title">{{ goal.name }}</h2>
+        <p class="muted">{{ statusNames[goal.status] }} · до {{ dateLabel(goal.deadline) }}</p>
+        <div class="goal-stats"><div><span>Накопичено</span><strong>{{ money(goal.saved_amount, goal.currency) }}</strong></div><div><span>Залишилося</span><strong>{{ money(goal.remaining_amount, goal.currency) }}</strong></div></div>
+        @if (goal.status === 'cancelled') {
+          <div class="actions"><button type="button" class="button button-primary" (click)="openRestore()" [disabled]="saving() || loading()">Зробити ціль активною</button></div>
+          @if (restoreOpen()) {
+            <form class="contribution-editor restore-editor" [formGroup]="restoreForm" (ngSubmit)="restoreGoal()" novalidate>
+              <h3>Відновити накопичення</h3><label>Новий строк цілі<input type="date" formControlName="deadline" [min]="minimumDeadline()" max="9999-12-31" [readOnly]="saving()" /></label>
+              <p class="help">Попередні внески залишаться збереженими. План буде перераховано на залишок суми до нового строку. Повторного списання з рахунку не буде.</p>
+              @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+              <div class="actions"><button type="submit" class="button button-primary" [disabled]="saving()">{{ saving() ? 'Відновлюємо…' : 'Відновити ціль' }}</button><button type="button" (click)="restoreOpen.set(false)" [disabled]="saving()">Закрити</button></div>
+            </form>
+          }
+        }
+        <div class="actions">
+          @if (+goal.saved_amount === 0) { <button type="button" class="danger" (click)="requestConfirmation('deleteGoal', goal.id)" [disabled]="saving() || loading() || detailLoading()">Видалити порожню ціль</button> }
+          @else { <button type="button" (click)="openTransfer()" [disabled]="saving() || loading() || detailLoading()">Перенести кошти в іншу ціль</button> }
+        </div>
+        @if (transferOpen()) {
+          <form class="contribution-editor transfer-editor" [formGroup]="transferForm" (ngSubmit)="transferSavings()" novalidate>
+            <h3>Перенести всі заощадження</h3><fieldset [disabled]="saving()">
+              <p class="help">Усі {{ money(goal.saved_amount, goal.currency) }} перейдуть до вибраної цілі. Дати й примітки внесків збережуться. Поточна ціль стане порожньою та скасованою.</p>
+              <label>Куди перенести<select formControlName="target"><option value="new">У нову ціль</option>@for (target of transferTargets(); track target.id) { <option [value]="target.id">{{ target.name }}</option> }</select></label>
+              @if (transferForm.controls.target.value === 'new') {
+                <div class="form-grid"><label>Назва нової цілі<input formControlName="name" maxlength="120" /></label><label>Цільова сума, {{ goal.currency }}<input formControlName="target_amount" inputmode="decimal" /></label><label>Накопичити до<input type="date" formControlName="deadline" [min]="minimumDeadline()" /></label></div>
+                <p class="help">Нова ціль замінить поточну активну. Якщо вже є інша активна ціль, оберіть її або спочатку скасуйте її.</p>
+              }
+              @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+              <div class="actions"><button type="submit" class="button button-primary">{{ saving() ? 'Переносимо…' : 'Підтвердити перенесення' }}</button><button type="button" (click)="transferOpen.set(false)">Закрити</button></div>
+            </fieldset>
+          </form>
+        }
+        @if (goal.status === 'active') {
+          <div class="actions"><button type="button" class="button button-primary" (click)="openContribution()" [attr.aria-expanded]="contributionFormOpen()" aria-controls="contribution-form" [disabled]="saving() || loading() || detailLoading()">+ Додати внесок</button><button type="button" (click)="openGoal(goal)" [disabled]="saving() || loading()">Редагувати ціль</button>
+          @if (goal.is_achieved) { <button (click)="completeGoal()" [disabled]="saving() || detailLoading()">Завершити ціль</button> }
+          <button type="button" class="danger" (click)="requestConfirmation('cancel', goal.id)" [disabled]="saving() || loading()">Скасувати ціль</button></div>
+        }
+        @if (confirmation(); as action) {
+          <div class="confirmation" role="group" aria-label="Підтвердження дії"><p>{{ action.kind === 'deleteGoal' ? 'Назавжди видалити порожню ціль? Відновити її буде неможливо.' : action.kind === 'cancel' ? 'Скасувати ціль? Вона перейде в архів. Історія залишиться, але змінювати ціль і внески більше не можна буде.' : 'Видалити внесок? Накопичена сума зменшиться.' }}</p><div class="actions"><button type="button" class="danger" (click)="confirmAction()" [disabled]="saving()">{{ saving() ? 'Виконуємо…' : 'Підтвердити' }}</button><button type="button" (click)="confirmation.set(null)" [disabled]="saving()">Залишити</button></div>@if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }</div>
+        }
+        @if (contributionFormOpen() && goal.status === 'active') {
+          <label>Рахунок для внеску<select (change)="sourceAccount.set($any($event.target).value)" [disabled]="saving()"><option value="" [selected]="!sourceAccount()">Ручний облік у {{ goal.currency }}</option>@for (account of sourceAccounts(); track account.id) { <option [value]="account.id" [selected]="sourceAccount() === account.id.toString()">{{ account.name }}</option> }</select></label>
+          <form id="contribution-form" class="contribution-editor" [formGroup]="contributionForm" (ngSubmit)="saveContribution()" novalidate><h3>{{ editingContribution() === null ? 'Новий внесок' : 'Редагувати внесок' }}</h3><fieldset [disabled]="saving()"><div class="form-grid two"><label>Сума, {{ goal.currency }}<input formControlName="amount" inputmode="decimal" placeholder="1000.00" aria-describedby="amount-help" /></label><label>Дата внеску<input type="date" formControlName="contributed_on" min="0001-01-01" [max]="today()" /></label></div><p id="amount-help" class="help">Вкажіть фактично відкладену суму. Десятковий роздільник — крапка або кома. Дата — не пізніше сьогодні.</p><label>Примітка (необов’язково)<textarea formControlName="note" rows="2" maxlength="500"></textarea></label>@if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }<div class="actions"><button type="submit" class="button button-primary">{{ saving() ? 'Зберігаємо…' : 'Зберегти внесок' }}</button><button type="button" (click)="contributionFormOpen.set(false)">Закрити</button></div></fieldset></form>
+        }
+        @if (detailLoading()) { <p class="muted" role="status">Оновлюємо внески та план…</p> }
+        @if (planError() || detailError()) { <p class="error" role="alert">{{ planError() || detailError() }}</p><button (click)="selectGoal(goal)" [disabled]="saving()">Повторити завантаження</button> }
+        @if (plan(); as plan) {
+          <section class="plan"><h3>Планові внески до цілі</h3>
+            @if (goal.status !== 'active') { <p class="muted">Ціль {{ goal.status === 'completed' ? 'завершена' : 'скасована' }}. Історія внесків збережена.</p> }
+            @else if (goal.is_achieved) { <p class="success">Цільову суму накопичено! Можна завершити ціль.</p> }
+            @else if (plan.overdue) { <p class="error">Строк минув. Відредагуйте дату цілі, щоб отримати новий план.</p> }
+            @else {
+              <p class="monthly-amount">{{ plan.required_monthly_amount === null ? '—' : money(plan.required_monthly_amount, goal.currency) }} <span>потрібно відкладати щомісяця</span></p>
+              <p class="help">Залишок {{ money(goal.remaining_amount, goal.currency) }} розподілено на {{ plan.installments.length }} місяців до строку цілі. Нижче — точна сума кожного планового внеску.</p>
+              @if (plan.is_feasible === null) { <p class="help">Недостатньо історії для оцінки доступності внесків. План розподіляє залишок до строку цілі.</p> }
+              @else if (plan.is_feasible) { <p class="success">За попередніми доходами й витратами план досяжний.</p> }
+              @else { <p class="error">Потрібно ще {{ money(plan.monthly_shortfall ?? '0', goal.currency) }} щомісяця понад середній вільний залишок.</p> }
+              <p class="help">Оцінка за {{ plan.history.sample_size }} місяцями з операціями з останніх трьох завершених місяців. План перераховується після внесків.</p>
+              <div class="table-scroll" tabindex="0" aria-label="Графік внесків"><table><caption>Щомісячні планові внески у {{ goal.currency }}</caption><thead><tr><th>Внести до</th><th>Планова сума</th></tr></thead><tbody>@for (item of plan.installments; track item.month) { <tr><td>{{ dateLabel(item.due_date) }}</td><td>{{ money(item.amount, goal.currency) }}</td></tr> }</tbody></table></div>
+              <p class="help">План не створює фактичних внесків автоматично. Записуйте їх кнопкою «Додати внесок», коли відкладете кошти.</p>
+            }
+          </section>
+        }
+        <section class="history"><h3>Історія внесків</h3>
+          @for (item of contributions(); track item.id) {
+            <article class="contribution"><div><strong>{{ money(item.amount, goal.currency) }}</strong><p class="muted">{{ dateLabel(item.contributed_on) }}</p>@if (item.note) { <p class="note">{{ item.note }}</p> }</div>
+            @if (goal.status === 'active') { <div class="actions"><button type="button" (click)="openContribution(item)" [disabled]="saving()" [attr.aria-label]="'Редагувати внесок від ' + dateLabel(item.contributed_on)">Редагувати</button><button type="button" class="danger" (click)="requestConfirmation('delete', item.id)" [disabled]="saving()" [attr.aria-label]="'Видалити внесок від ' + dateLabel(item.contributed_on)">Видалити</button></div> }</article>
+          } @empty { @if (!detailLoading() && !detailError()) { <p class="muted">Внесків ще немає.</p> } }
+        </section>
+      } @else { <div class="empty"><p class="eyebrow">МАЛІ КРОКИ. ВЕЛИКІ ПЛАНИ.</p><h2 id="detail-title">Оберіть свою ціль</h2><p>Тут з’являться внески, залишок до мети та ваш місячний план.</p></div> }
+    </section>
+  </div>
+</section>

@@ -1,0 +1,122 @@
+<section class="container dashboard">
+  <div class="page-heading">
+    <div><p class="eyebrow">ВАШІ ФІНАНСИ</p><h1>Особистий кабінет</h1><p class="intro">Сьогоднішні рішення. Завтрашні можливості.</p></div>
+    <a class="settings" routerLink="/account/settings">Налаштування акаунту</a>
+  </div>
+  <nav class="cabinet-tabs" aria-label="Розділи особистого кабінету">
+    <a routerLink="/dashboard" [attr.aria-current]="!expensesTab() ? 'page' : null">Огляд</a>
+    <a routerLink="/dashboard" [queryParams]="{tab: 'expenses'}" [attr.aria-current]="expensesTab() ? 'page' : null">Витрати та підписки</a>
+    <a routerLink="/savings">Заощадження</a>
+    <a routerLink="/accounts">Рахунки</a>
+  </nav>
+  <div class="toolbar">
+    <div class="filters">
+      <label>Місяць витрат<input type="month" [value]="month()" (change)="changeMonth($event)" min="0001-01" max="9998-12" [disabled]="saving() || expenseSaving() || deleting() !== null" /></label>
+      <label>Валюта<select [value]="currency()" (change)="changeCurrency($event)" [disabled]="saving() || expenseSaving() || deleting() !== null"><option>UAH</option><option>USD</option><option>EUR</option></select></label>
+    </div>
+    <button class="refresh" (click)="load()" [disabled]="loading() || saving() || expenseSaving() || deleting() !== null">{{ loading() ? 'Завантажуємо…' : 'Оновити дані' }}</button>
+  </div>
+  @if (loading()) { <p class="loading" role="status">Збираємо вашу фінансову картину…</p> }
+  @if (monthlyError()) { <p class="error" role="alert">{{ monthlyError() }}</p> }
+  @if (!expensesTab()) {
+  <div class="summary" [attr.aria-busy]="loading()">
+    <article><p>Доходи за місяць</p><strong>{{ monthly() ? money(monthly()!.income_total) : '—' }}</strong><span class="summary-note">Надходження на ваші рахунки</span></article>
+    <article><p>Витрати за місяць</p><strong>{{ monthly() ? money(monthly()!.expense_total) : '—' }}</strong><span class="summary-note">Усі категорії витрат</span></article>
+    <article class="net"><p>Різниця доходів і витрат</p><strong>{{ monthly() ? money(monthly()!.net_total) : '—' }}</strong><span class="summary-note">За вибраний місяць</span></article>
+  </div>
+
+  <article class="panel forecast-panel" [attr.aria-busy]="loading()">
+    <div class="panel-heading"><div><p class="eyebrow">ПОГЛЯД УПЕРЕД</p><h2>Прогноз заощаджень</h2></div>
+      <label class="horizon">Горизонт<select aria-label="Горизонт прогнозу" (change)="changeHorizon($event)" [disabled]="loading()"><option value="6" [selected]="horizon() === 6">6 місяців</option><option value="12" [selected]="horizon() === 12">12 місяців</option><option value="24" [selected]="horizon() === 24">24 місяці</option></select></label>
+    </div>
+    @if (forecastError()) { <p class="error" role="alert">{{ forecastError() }}</p> }
+    @if (forecast(); as forecast) {
+      @if (forecast.status === 'ready') {
+        <p class="muted chart-description">{{ forecast.starting_savings_basis === 'active_goal' ? 'Прогноз суми заощаджень від поточної активної цілі.' : 'Прогноз зміни заощаджень від нуля.' }} Наступні {{ horizon() }} місяців від сьогодні.</p>
+        <div class="legend" role="group" aria-label="Сценарії прогнозу">
+          <button [class.selected]="selectedScenario() === 'all'" [attr.aria-pressed]="selectedScenario() === 'all'" (click)="selectedScenario.set('all')">Усі сценарії</button>
+          @for (scenario of forecast.scenarios; track scenario.name) {
+            <button [class.selected]="selectedScenario() === scenario.name" [attr.aria-pressed]="selectedScenario() === scenario.name" (click)="selectedScenario.set(scenario.name)"><span class="swatch" [style.background]="colors[scenario.name]"></span>{{ scenarioNames[scenario.name] }}</button>
+          }
+        </div>
+        <div class="chart-scroll" tabindex="0" aria-label="Діаграма прогнозів, доступне горизонтальне прокручування">
+          <svg viewBox="0 0 900 315" role="img" aria-labelledby="forecast-title forecast-description">
+            <title id="forecast-title">Прогноз заощаджень у {{ currency() }}</title>
+            <desc id="forecast-description">Три сценарії на основі історії доходів і витрат. Числові значення доступні в таблиці під діаграмою.</desc>
+            @for (tick of ticks(); track $index) {
+              <line x1="105" x2="850" [attr.y1]="y(tick)" [attr.y2]="y(tick)" class="grid-line" />
+              <text x="94" [attr.y]="y(tick) + 4" text-anchor="end" class="axis-label">{{ money(tick) }}</text>
+            }
+            <line x1="105" x2="850" [attr.y1]="y(0)" [attr.y2]="y(0)" class="zero-line" />
+            <text x="105" y="300" class="axis-label">Зараз</text>
+            @for (point of forecast.scenarios[0].points; track point.month; let i = $index) {
+              @if ((i + 1) % (horizon() > 12 ? 4 : 2) === 0) { <text [attr.x]="x(i + 1)" y="300" text-anchor="middle" class="axis-label">{{ monthLabel(point.month) }}</text> }
+            }
+            @for (scenario of visibleScenarios(); track scenario.name) {
+              <path [attr.d]="path(scenario)" fill="none" [attr.stroke]="colors[scenario.name]" stroke-width="3" [attr.stroke-dasharray]="scenario.name === 'pessimistic' ? '7 5' : null" />
+              @for (point of scenario.points; track point.month; let i = $index) {
+                <circle [attr.cx]="x(i + 1)" [attr.cy]="y(+point.projected_savings)" r="3" [attr.fill]="colors[scenario.name]"><title>{{ scenarioNames[scenario.name] }} · {{ monthLabel(point.month) }} · {{ money(point.projected_savings) }}</title></circle>
+              }
+            }
+          </svg>
+        </div>
+        <div class="forecast-results">
+          @for (scenario of visibleScenarios(); track scenario.name) {
+            <div><span [style.color]="colors[scenario.name]">{{ scenarioNames[scenario.name] }}</span><strong>{{ money(lastValue(scenario)) }}</strong><small>через {{ horizon() }} місяців</small></div>
+          }
+        </div>
+        <details><summary>Значення за місяцями</summary><div class="table-scroll"><table><caption>Прогноз заощаджень, {{ currency() }}</caption><thead><tr><th>Місяць</th>@for (scenario of visibleScenarios(); track scenario.name) { <th>{{ scenarioNames[scenario.name] }}</th> }</tr></thead><tbody>
+          @for (point of forecast.scenarios[0].points; track point.month; let i = $index) { <tr><th>{{ monthLabel(point.month) }}</th>@for (scenario of visibleScenarios(); track scenario.name) { <td>{{ money(scenario.points[i].projected_savings) }}</td> }</tr> }
+        </tbody></table></div></details>
+        <p class="footnote">Розраховано за {{ forecast.sample_size }} місяцями з операціями за останні 6 завершених місяців. Це оцінка на основі історії, а не гарантований результат.</p>
+      } @else {
+        <div class="empty forecast-empty"><span class="empty-symbol" aria-hidden="true">⌁</span><h3>Для прогнозу потрібно трохи історії</h3><p>Потрібні операції щонайменше за {{ forecast.minimum_history_months }} із останніх 6 завершених місяців у {{ currency() }}. Зараз є дані за {{ forecast.sample_size }}.</p></div>
+      }
+    }
+  </article>
+
+  }
+  @if (expensesTab()) { <app-expenses-panel [month]="month()" [currency]="currency()" [refreshVersion]="refreshVersion()" (busy)="expenseSaving.set($event)" (saved)="load()" /> }
+  <div class="detail-grid" [class.ledger-grid]="expensesTab()">
+    @if (expensesTab()) {
+    <article class="panel subscriptions-panel" [attr.aria-busy]="loading()">
+      <div class="panel-heading"><div><p class="eyebrow">РЕГУЛЯРНІ ПЛАТЕЖІ</p><h2>Щомісячні підписки</h2></div><button class="add-button" (click)="formOpen.set(!formOpen())" [attr.aria-expanded]="formOpen()" aria-controls="subscription-form" [disabled]="saving()">{{ formOpen() ? 'Закрити' : '+ Додати' }}</button></div>
+      @if (plansError()) { <p class="error" role="alert">{{ plansError() }}</p> }
+      @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+      @if (formOpen()) {
+        <form id="subscription-form" [formGroup]="form" (ngSubmit)="add()" novalidate class="subscription-form">
+          <label>Назва<input formControlName="name" placeholder="Наприклад, Spotify" maxlength="120" [readOnly]="saving()" /></label>
+          <div class="form-row"><label>Сума, {{ currency() }}<input formControlName="amount" inputmode="decimal" placeholder="199.00" [readOnly]="saving()" /></label><label>День оплати<input formControlName="billing_day" type="number" min="1" max="31" step="1" [readOnly]="saving()" /></label></div>
+          @if (form.touched && form.invalid) { <p class="error">Вкажіть назву, суму від 0.01 (до двох знаків після крапки) та день від 1 до 31.</p> }
+          <button class="button button-primary" type="submit" [disabled]="saving() || loading()">{{ saving() ? 'Зберігаємо…' : 'Зберегти підписку' }}</button>
+        </form>
+      }
+      @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+      @if (!loading() && !plansError()) {
+        @if (plans().length) {
+          <ul class="subscriptions">@for (plan of plans(); track plan.id) {
+            <li><span class="subscription-avatar" aria-hidden="true">{{ plan.name.slice(0, 1).toUpperCase() }}</span><div class="subscription-name"><h3>{{ plan.name }}</h3><p>Оплата {{ billingLabel(plan.billing_day) }}</p></div><div class="subscription-amount"><strong>{{ money(plan.amount) }}</strong><span>на місяць</span></div><button class="delete" (click)="remove(plan)" [disabled]="deleting() !== null" [attr.aria-label]="'Видалити підписку ' + plan.name">{{ deleting() === plan.id ? '…' : '×' }}</button></li>
+          }</ul>
+          <div class="subscription-total"><span>Разом на місяць</span><strong>{{ money(subscriptionTotal()) }}</strong></div>
+        } @else { <div class="empty"><h3>Підписок поки немає</h3><p>Додайте регулярні платежі, щоб бачити місячну суму в одному місці.</p></div> }
+      }
+      <p class="footnote">Це список запланованих платежів. Він не створює витрат автоматично. Якщо дня оплати немає в місяці, показуємо останній день.</p>
+    </article>
+
+    } @else {
+    <article class="panel categories-panel" [attr.aria-busy]="loading()">
+      <div class="panel-heading"><div><p class="eyebrow">КУДИ ЙДУТЬ КОШТИ</p><h2>Витрати за категоріями</h2></div></div>
+      <p class="muted">{{ monthLabel(month()) }} · {{ currency() }}</p>
+      @if (monthlyError()) { <p class="error" role="alert">{{ monthlyError() }}</p> }
+      @if (monthly(); as analytics) {
+        @if (analytics.categories.length) {
+          <ul class="categories">@for (category of analytics.categories; track category.category_id; let i = $index) {
+            <li><div class="category-row"><span>{{ category.name }}</span><strong>{{ money(category.expense_total) }}</strong></div><div class="category-bar" aria-hidden="true"><span [style.width.%]="share(category.expense_total)" [style.background]="['#27d5b0', '#82aaff', '#f4b078', '#bc9bff'][i % 4]"></span></div><p class="category-share">{{ share(category.expense_total).toFixed(1) }}% витрат</p></li>
+          }</ul>
+          <div class="subscription-total"><span>Усього витрат</span><strong>{{ money(analytics.expense_total) }}</strong></div>
+        } @else { <div class="empty"><h3>Цього місяця витрат немає</h3><p>Тут з’являться категорії ваших операцій. Спробуйте вибрати інший місяць або валюту.</p></div> }
+      }
+    </article>
+    }
+  </div>
+</section>

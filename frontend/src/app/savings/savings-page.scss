@@ -1,0 +1,78 @@
+:host { display: block; }
+.savings { padding-block: 48px 80px; }
+.heading, .toolbar, .filters, .actions, .goal-top, .goal-bottom { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+.heading { margin-bottom: 24px; }
+h1 { margin: 10px 0 12px; font-size: clamp(30px, 4vw, 42px); letter-spacing: -.035em; }
+h2 { font-size: 23px; overflow-wrap: anywhere; }
+h3 { font-size: 18px; margin-bottom: 16px; }
+.muted, .help { color: var(--muted); line-height: 1.7; }
+.help { font-size: 14px; margin: 14px 0 20px; }
+.eyebrow { font-size: 13px; }
+.cabinet-tabs { display: flex; gap: 24px; overflow-x: auto; }
+.cabinet-tabs a { padding: 14px 0; white-space: nowrap; color: var(--muted); border-bottom: 2px solid transparent; }
+.cabinet-tabs a[aria-current] { color: var(--mint); border-color: var(--mint); }
+.toolbar { padding: 20px 0; border-block: 1px solid var(--line); margin-bottom: 24px; }
+.filters { justify-content: flex-start; }
+label { display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--muted); }
+input, select, textarea { width: 100%; min-width: 0; color: var(--text); background: #0e1728; border: 1px solid #ffffff25; border-radius: 8px; padding: 12px; font: inherit; }
+textarea { resize: vertical; }
+select { appearance: none; padding-right: 35px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23a2aec4' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+button { border: 1px solid #ffffff25; border-radius: 8px; background: transparent; padding: 10px 14px; font-size: 14px; }
+button.button-primary { background: var(--mint); color: #071c19; border-color: var(--mint); }
+button.button-primary:hover:not(:disabled) { background: #6ce6cb; }
+button:disabled { opacity: .5; }
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.summary article, .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 26px; min-width: 0; }
+.summary p, .summary span { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.summary strong { display: block; font-size: clamp(23px, 2.7vw, 33px); margin-block: 18px 12px; overflow-wrap: anywhere; }
+.summary .highlight { background: linear-gradient(120deg, #15352f, #14212e); border-color: #27d5b035; }
+.highlight strong { color: var(--mint); }
+.workspace { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.4fr); gap: 24px; align-items: start; margin-top: 28px; }
+.goal-card { width: 100%; text-align: left; padding: 20px; margin-top: 16px; background: #0b102050; }
+.goal-card:hover, .goal-card.selected { border-color: var(--mint); }
+.goal-top { align-items: flex-start; }
+.goal-top strong { font-size: 18px; overflow-wrap: anywhere; }
+.badge { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.badge.active { color: var(--mint); }
+.saved { display: block; margin-top: 24px; font-size: 20px; }
+.saved small { display: block; color: var(--muted); font-size: 14px; margin-top: 6px; }
+.progress { display: block; background: #ffffff12; border-radius: 12px; height: 7px; overflow: hidden; margin-block: 18px 12px; }
+.progress > span { display: block; height: 100%; background: var(--mint); }
+.goal-bottom { font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.detail > h2 { margin-block: 12px; }
+.goal-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-block: 26px; }
+.goal-stats span { display: block; color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.goal-stats strong { font-size: 23px; overflow-wrap: anywhere; }
+.actions { justify-content: flex-start; flex-wrap: wrap; gap: 10px; }
+.detail > .actions + .actions { margin-top: 16px; }
+.danger, .error { color: #ffb9b9; }
+.error, .success { margin-block: 16px; line-height: 1.7; }
+.success { color: var(--mint); }
+.editor { margin-block: 24px; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.form-grid.two { grid-template-columns: 1fr 1fr; margin-bottom: 16px; }
+.contribution-editor, .confirmation { background: #0b102050; border: 1px solid #ffffff25; border-radius: 12px; padding: 20px; margin-top: 20px; }
+.contribution-editor .actions, .confirmation .actions { margin-top: 16px; }
+.plan, .history { margin-top: 28px; padding-top: 26px; border-top: 1px solid var(--line); }
+.monthly-amount { font-size: 28px; margin-top: 20px; color: var(--mint); }
+.monthly-amount span { color: var(--muted); font-size: 16px; }
+summary { cursor: pointer; padding-block: 12px; }
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; white-space: nowrap; }
+caption { text-align: left; color: var(--muted); padding-block: 12px; }
+th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); }
+th:last-child, td:last-child { text-align: right; }
+.contribution { padding-block: 18px; border-bottom: 1px solid var(--line); }
+.contribution .actions { margin-top: 12px; }
+.note { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; line-height: 1.6; }
+.empty { padding: 45px 10px; text-align: center; }
+.empty p { color: var(--muted); line-height: 1.8; margin-block: 16px; }
+@media (max-width: 1000px) { .workspace { grid-template-columns: 1fr; } .form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .savings { padding-top: 28px; } .heading, .toolbar { align-items: stretch; flex-direction: column; }
+  .summary { grid-template-columns: 1fr; gap: 12px; } .panel, .summary article { padding: 20px; }
+  .filters label { flex: 1; min-width: 0; } .form-grid.two, .goal-stats { grid-template-columns: 1fr; }
+  .cabinet-tabs { gap: 18px; font-size: 14px; } .goal-top { flex-wrap: wrap; } .actions button { flex: 1 1 auto; }
+}

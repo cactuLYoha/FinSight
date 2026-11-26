@@ -1,0 +1,124 @@
+<div class="preview-wrap">
+  <div class="preview" aria-label="Демонстраційний фінансовий огляд">
+    <div class="preview-top">
+      <div class="preview-brand">
+        <img src="favicon.svg" alt="" width="20" height="20" /> FinSight <span>/</span>
+        <span>Огляд</span>
+      </div>
+      <span class="demo-label"><span></span> ДЕМОНСТРАЦІЙНІ ДАНІ</span>
+    </div>
+    <div class="preview-content">
+      <div class="overview-heading">
+        <div>
+          <p>ВАША ФІНАНСОВА КАРТИНА</p>
+          <h2>Усе під контролем<span>.</span></h2>
+        </div>
+        <span class="period">За місяць</span>
+      </div>
+      <div class="totals">
+        <div class="total">
+          <span class="total-label"><span class="up">↙</span> Доходи</span
+          ><strong>42 000<span> ₴</span></strong
+          ><span class="total-detail">Надходження за місяць</span>
+        </div>
+        <div class="total">
+          <span class="total-label"><span class="down">↗</span> Витрати</span
+          ><strong>28 400<span> ₴</span></strong
+          ><span class="total-detail">Витрати за категоріями</span>
+        </div>
+        <div class="total saving">
+          <span class="total-label"><app-icon name="wallet" [size]="12" /> Залишок</span
+          ><strong>13 600<span> ₴</span></strong
+          ><span class="total-detail">Можна заощадити</span>
+        </div>
+      </div>
+      <div class="chart">
+        <div class="chart-heading">
+          <h3>Куди рухаються ваші плани</h3>
+          <span>Прогноз · 6 міс.</span>
+        </div>
+        <div class="legend">
+          <span><i class="optimistic"></i>Оптимістичний</span
+          ><span><i class="realistic"></i>Реалістичний</span
+          ><span><i class="pessimistic"></i>Песимістичний</span>
+        </div>
+        <svg
+          class="forecast-chart"
+          viewBox="0 0 500 174"
+          role="img"
+          aria-labelledby="forecast-title forecast-description"
+        >
+          <title id="forecast-title">Приклад трьох сценаріїв заощаджень</title>
+          <desc id="forecast-description">
+            У демонстраційному прогнозі за шість місяців заощадження зростають за всіма трьома
+            сценаріями. Найвище зростання — в оптимістичному, найнижче — в песимістичному.
+          </desc>
+          <defs>
+            <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#27d5b0" stop-opacity=".18" />
+              <stop offset="100%" stop-color="#27d5b0" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <g stroke="#ffffff09" stroke-dasharray="3 5">
+            <path d="M40 20H490M40 57H490M40 94H490M40 131H490" />
+          </g>
+          <g fill="#7889a4" font-family="inherit" font-size="9">
+            <text x="0" y="23">150 тис.</text>
+            <text x="0" y="60">120 тис.</text>
+            <text x="4" y="97">90 тис.</text>
+            <text x="4" y="134">60 тис.</text>
+          </g>
+          <path
+            d="M42 128C80 122 95 118 130 109S190 92 220 83 280 69 310 58 372 41 400 29 457 14 488 7V139H42Z"
+            fill="url(#chart-fill)"
+          />
+          <path
+            d="M42 128C80 122 95 118 130 109S190 92 220 83 280 69 310 58 372 41 400 29 457 14 488 7"
+            stroke="#27d5b0"
+            stroke-width="2"
+            fill="none"
+            stroke-dasharray="5 4"
+          />
+          <path
+            d="M42 128C80 124 95 121 130 117S190 104 220 98 280 86 310 79 370 69 400 59 457 48 488 40"
+            stroke="#8e9cf0"
+            stroke-width="2.5"
+            fill="none"
+          />
+          <path
+            d="M42 128C80 125 95 124 130 122S190 116 220 113 280 107 310 103 370 98 400 93 457 88 488 83"
+            stroke="#d8a971"
+            stroke-width="2"
+            fill="none"
+            stroke-dasharray="4 4"
+          />
+          <circle cx="488" cy="40" r="4" fill="#8e9cf0" stroke="#192337" stroke-width="3" />
+          <g fill="#7889a4" font-family="inherit" font-size="10" text-anchor="middle">
+            <text x="44" y="165">Гру</text>
+            <text x="132" y="165">Січ</text>
+            <text x="221" y="165">Лют</text>
+            <text x="310" y="165">Бер</text>
+            <text x="399" y="165">Кві</text>
+            <text x="488" y="165">Тра</text>
+          </g>
+        </svg>
+      </div>
+      <div class="goal">
+        <span class="goal-icon"><app-icon name="target" [size]="21" /></span>
+        <div class="goal-info">
+          <div class="goal-top">
+            <h3>Фінансова подушка</h3>
+            <span>68%</span>
+          </div>
+          <div class="progress"><span></span></div>
+          <p>68 000 ₴ <span>із 100 000 ₴</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="preview-footer">
+      <span class="live-dot"></span> Приклад того, як дані стають зрозумілою картиною
+      <app-icon name="chart" [size]="13" />
+    </div>
+  </div>
+  <div class="preview-caption"><span></span> ВІЗУАЛІЗАЦІЯ МОЖЛИВОСТЕЙ FINSIGHT</div>
+</div>

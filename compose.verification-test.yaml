@@ -1,0 +1,49 @@
+name: finsight-verification-test
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: verification_test
+      POSTGRES_USER: verification_test
+      POSTGRES_PASSWORD: isolated-test-password
+    volumes:
+      - verification_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verification_test -d verification_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  api:
+    image: finsight-api:verification-test
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.verification-test
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: verification_test
+      DB_USER: verification_test
+      DB_PASSWORD: isolated-test-password
+      SECRET_KEY: verification-test-secret-only-do-not-use-in-production
+      JWT_SECRET_KEY: verification-test-jwt-only-do-not-use-in-production
+      FRONTEND_PORT: "4201"
+    volumes:
+      - ./artifacts/verification-mail:/test-mail
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health', timeout=3).close()"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  frontend:
+    image: finsight-frontend:verification-test
+    build: ./frontend
+    ports:
+      - "127.0.0.1:4201:80"
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  verification_data:

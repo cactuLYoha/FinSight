@@ -1,0 +1,9 @@
+#Application
+SECRET_KEY = ds@34as12ASDFWQQESa
+# Flask
+FLASK_APP=run.py
+FLASK_DEBUG=True
+#Database
+DATABASE_URL=postgresql://postgres:Kolipor1@localhost:5432/finsight
+#Environment
+ENVIRONMENT= development
